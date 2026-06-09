@@ -1,0 +1,174 @@
+import { spawn } from 'node:child_process';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs';
+import { dirname } from 'node:path';
+import { Config } from '../config';
+
+/**
+ * Persisted metadata describing the single background daemon. Written by the
+ * parent process right after spawning the detached child.
+ */
+export type DaemonState = {
+  pid: number;
+  ports: number[];
+  dataFiles: string[];
+  logFile: string;
+  startedAt: string;
+  watch: boolean;
+};
+
+/**
+ * Read and parse the daemon state file. Returns null when there is no state
+ * file or when it cannot be parsed.
+ */
+export const readState = (): DaemonState | null => {
+  if (!existsSync(Config.stateFile)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(readFileSync(Config.stateFile, 'utf-8')) as DaemonState;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Persist the daemon state file, creating its parent directory if needed.
+ */
+export const writeState = (state: DaemonState): void => {
+  mkdirSync(dirname(Config.stateFile), { recursive: true });
+  writeFileSync(Config.stateFile, JSON.stringify(state, null, 2));
+};
+
+/**
+ * Remove the daemon state file. No-op when it does not exist.
+ */
+export const clearState = (): void => {
+  rmSync(Config.stateFile, { force: true });
+};
+
+/**
+ * Check whether a process is alive using a signal 0 probe.
+ */
+export const isAlive = (pid: number): boolean => {
+  try {
+    process.kill(pid, 0);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Spawn the current CLI invocation as a detached background process.
+ *
+ * The detached child re-runs the same entrypoint with the same arguments,
+ * minus the `--detach`/`-D` token, so it behaves like a regular foreground
+ * `start`. Its stdout/stderr are redirected to the fixed detach log file,
+ * which is truncated on every spawn.
+ *
+ * @returns the PID of the detached child.
+ */
+export const spawnDetached = (): number => {
+  // ensure the logs directory exists before opening the log file descriptor
+  mkdirSync(Config.logsPath, { recursive: true });
+
+  // open (truncating) the fixed detach log file
+  const logFd = openSync(Config.detachLogFile, 'w');
+
+  // reuse the parent argv (entrypoint + args) with the detach token removed
+  const childArgs = process.argv
+    .slice(1)
+    .filter((token) => token !== '--detach' && token !== '-D');
+
+  const child = spawn(process.argv[0], childArgs, {
+    detached: true,
+    stdio: ['ignore', logFd, logFd],
+    windowsHide: true
+  });
+
+  child.unref();
+  closeSync(logFd);
+
+  if (child.pid === undefined) {
+    throw new Error('Failed to spawn the detached background process');
+  }
+
+  return child.pid;
+};
+
+const wait = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Outcome of a stop attempt.
+ *
+ * - `wasRunning`: whether a live daemon was found and signalled.
+ * - `pid`: the PID that was targeted, when there was state.
+ */
+export type StopResult = {
+  wasRunning: boolean;
+  pid?: number;
+};
+
+/**
+ * Stop the background daemon, if any.
+ *
+ * Sends SIGINT for a graceful shutdown, polls liveness for up to `timeout`
+ * milliseconds and escalates to SIGKILL if the process is still alive. The
+ * state file is always removed afterwards. Idempotent: returns cleanly when
+ * nothing is running or the recorded process is already dead (stale).
+ */
+export const stopDaemon = async (timeout = 3000): Promise<StopResult> => {
+  const state = readState();
+
+  if (!state) {
+    return { wasRunning: false };
+  }
+
+  // stale state file: the recorded process is already gone
+  if (!isAlive(state.pid)) {
+    clearState();
+
+    return { wasRunning: false, pid: state.pid };
+  }
+
+  // graceful shutdown
+  try {
+    process.kill(state.pid, 'SIGINT');
+  } catch {
+    // process vanished between the liveness check and the signal
+  }
+
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline && isAlive(state.pid)) {
+    await wait(100);
+  }
+
+  // escalate if still alive
+  if (isAlive(state.pid)) {
+    try {
+      process.kill(state.pid, 'SIGKILL');
+    } catch {
+      // already dead
+    }
+
+    const killDeadline = Date.now() + 1000;
+    while (Date.now() < killDeadline && isAlive(state.pid)) {
+      await wait(50);
+    }
+  }
+
+  clearState();
+
+  return { wasRunning: true, pid: state.pid };
+};

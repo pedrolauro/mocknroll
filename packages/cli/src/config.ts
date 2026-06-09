@@ -21,9 +21,13 @@ export const Config: {
   logsPath: string;
   cloudScheme: string;
   cloudApiUrl: string;
+  stateFile: string;
+  detachLogFile: string;
 } = {
   version,
   cloudScheme,
   cloudApiUrl,
-  logsPath: join(homedir(), `/${dirName}/logs/`)
+  logsPath: join(homedir(), `/${dirName}/logs/`),
+  stateFile: join(homedir(), `/${dirName}/daemon.json`),
+  detachLogFile: join(homedir(), `/${dirName}/logs/detach.log`)
 };

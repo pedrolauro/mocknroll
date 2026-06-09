@@ -13,7 +13,7 @@ import {
   createLoggerInstance,
   listenServerEvents
 } from '@mockoon/commons-server';
-import { Command, Flags } from '@oclif/core';
+import { Command, Flags, Interfaces } from '@oclif/core';
 import { watch } from 'chokidar';
 import { join, resolve } from 'path';
 import { format } from 'util';
@@ -22,6 +22,7 @@ import {
   commonFlags,
   logTransactionFlag
 } from '../constants/command.constants';
+import { spawnDetached, writeState } from '../libs/daemon';
 import { parseDataFile } from '../libs/data';
 import { getDirname, transformEnvironmentName } from '../libs/utils';
 
@@ -123,6 +124,12 @@ export default class Start extends Command {
         'Watch local data file(s) for changes and restart the server when a change is detected',
       default: false
     }),
+    detach: Flags.boolean({
+      char: 'D',
+      description:
+        'Start the mock(s) as a detached background process, freeing the terminal',
+      default: false
+    }),
     'polling-interval': Flags.integer({
       description: 'Local files watch polling interval in milliseconds',
       default: 2000
@@ -156,6 +163,12 @@ export default class Start extends Command {
       this.error(
         'A token is required to load cloud environments. Use the --token flag or set the MOCKOON_CLOUD_TOKEN environment variable.'
       );
+    }
+
+    if (userFlags.detach) {
+      await this.startDetached(userFlags);
+
+      return;
     }
 
     try {
@@ -241,6 +254,56 @@ export default class Start extends Command {
     }
   }
 
+  /**
+   * Start the mock(s) as a detached background process.
+   *
+   * The parent parses and validates the data file(s) to resolve the effective
+   * ports, spawns a detached child re-running `start` in the foreground (minus
+   * the detach token), persists the daemon state and reports the PID and log
+   * path before returning, freeing the terminal.
+   */
+  private startDetached = async (
+    userFlags: Interfaces.InferredFlags<typeof Start.flags>
+  ): Promise<void> => {
+    const ports: number[] = [];
+
+    try {
+      for (const [index, dataFilePath] of userFlags.data.entries()) {
+        const parsedEnvironment = await parseDataFile(
+          dataFilePath,
+          {
+            port: userFlags.port[index],
+            hostname: userFlags.hostname[index],
+            proxy: userFlags.proxy as 'enabled' | 'disabled'
+          },
+          userFlags.repair,
+          userFlags.token
+        );
+
+        ports.push(parsedEnvironment.environment.port);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        this.error(error.message);
+      }
+    }
+
+    const pid = spawnDetached();
+
+    writeState({
+      pid,
+      ports,
+      dataFiles: userFlags.data,
+      logFile: Config.detachLogFile,
+      startedAt: new Date().toISOString(),
+      watch: userFlags.watch
+    });
+
+    this.log(
+      `Mock API started in background (PID ${pid}) - logs at ${Config.detachLogFile}`
+    );
+  };
+
   private createServer = (
     parameters: ServerOptions & {
       environment: Environment;
@@ -316,6 +379,11 @@ export default class Start extends Command {
     });
 
     process.on('SIGINT', () => {
+      server.stop();
+    });
+
+    // mirror SIGINT so a detached daemon can be stopped via SIGTERM as well
+    process.on('SIGTERM', () => {
       server.stop();
     });
 
