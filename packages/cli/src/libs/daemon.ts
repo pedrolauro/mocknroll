@@ -134,6 +134,44 @@ export const getEnvLogFiles = async (state: DaemonState): Promise<string[]> => {
 };
 
 /**
+ * Environment marker set on the detached child. The child re-runs `start`, so
+ * even if the `--detach` token survived in its argv it must never fork again:
+ * `start` skips the detach branch whenever this variable is present. This is
+ * the authoritative guard against a recursive spawn; argv filtering below is a
+ * best-effort cleanup so the child's parsed flags stay accurate.
+ */
+export const DETACHED_CHILD_ENV = 'MOCKOON_CLI_DETACHED_CHILD';
+
+/**
+ * Remove the detach flag from the parent argv so the detached child parses as a
+ * regular foreground `start`. Handles the forms oclif accepts for the boolean
+ * flag: the long token (`--detach`, `--detach=<value>`), the standalone short
+ * (`-D`), and a short cluster led by the detach flag (`-Dw`, `-Dwt`, ...).
+ *
+ * A cluster where the detach flag is not first (e.g. `-wD`) or any other exotic
+ * form is intentionally left untouched here: the {@link DETACHED_CHILD_ENV}
+ * guard prevents a recursive fork regardless, and removing the `D` from an
+ * arbitrary position risks corrupting a value-taking flag's argument.
+ */
+const stripDetachFlag = (args: string[]): string[] =>
+  args.reduce<string[]>((kept, token) => {
+    if (
+      token === '--detach' ||
+      token.startsWith('--detach=') ||
+      token === '-D'
+    ) {
+      return kept;
+    }
+
+    // short cluster led by the detach flag: drop the `D`, keep the rest
+    if (/^-D[a-zA-Z]+$/.test(token)) {
+      return [...kept, `-${token.slice(2)}`];
+    }
+
+    return [...kept, token];
+  }, []);
+
+/**
  * Spawn the current CLI invocation as a detached background process.
  *
  * The detached child re-runs the same entrypoint with the same arguments,
@@ -151,14 +189,14 @@ export const spawnDetached = (): number => {
   const logFd = openSync(Config.detachLogFile, 'w');
 
   // reuse the parent argv (entrypoint + args) with the detach token removed
-  const childArgs = process.argv
-    .slice(1)
-    .filter((token) => token !== '--detach' && token !== '-D');
+  const childArgs = stripDetachFlag(process.argv.slice(1));
 
   const child = spawn(process.argv[0], childArgs, {
     detached: true,
     stdio: ['ignore', logFd, logFd],
-    windowsHide: true
+    windowsHide: true,
+    // mark the child so it never re-enters the detach branch (see above)
+    env: { ...process.env, [DETACHED_CHILD_ENV]: '1' }
   });
 
   child.unref();

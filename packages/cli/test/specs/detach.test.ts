@@ -425,4 +425,36 @@ describe('Detach mode', () => {
 
     strictEqual(await countServerStarted(), 1);
   });
+
+  it('should detach correctly when the flag is clustered with another short flag (-Dw), without recursively forking', async () => {
+    // `-Dw` combines detach (-D) and watch (-w) in a single short cluster. The
+    // detach token must be stripped from the child argv (and the child guarded)
+    // so the daemon starts exactly once instead of re-detaching in a loop.
+    const { output } = await spawnCli([
+      'start',
+      '--data',
+      './test/data/envs/mock1.json',
+      '--port',
+      '3064',
+      '-Dw'
+    ]);
+    await output;
+
+    const res = await fetchWithRetry('http://localhost:3064/api/test');
+    const body = await res.text();
+    ok(body.includes('mock-content-1'));
+
+    // exactly one daemon was spawned: the boot line appears once in the log
+    const log = await readFile(Config.detachLogFile, 'utf-8');
+    strictEqual(
+      log.split('Server started').length - 1,
+      1,
+      `expected a single server boot, got log: ${log}`
+    );
+
+    // and the persisted state records watch mode (from the clustered -w)
+    const state = await readStateFile();
+    ok(state, 'expected a state file to have been written');
+    strictEqual(state.watch, true);
+  });
 });

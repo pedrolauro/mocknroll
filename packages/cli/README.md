@@ -121,6 +121,8 @@ Mockoon's CLI has been tested on Node.js versions 18, 20, 22 and 24.
 ## Commands
 
 - [`start`](#start-command)
+- [`stop`](#stop-command)
+- [`status`](#status-command)
 - [`dockerize`](#dockerize-command)
 - [`import`](#import-command)
 - [`export`](#export-command)
@@ -134,7 +136,7 @@ Starts one (or more) mock API from Mockoon's environment file(s) as a foreground
 The mocks will run by default on the ports and hostnames specified in the files. You can override these values by using the `--port` and `--hostname` flags.
 `--data`, `--port`, `--hostname`, and `--public-base-url` flags support multiple entries to run multiple mock APIs at once (see examples below).
 
-> 💡 To run the CLI as a background process, add an `&` at the end of the command: `mockoon-cli start -d ./data-file.json &`.
+> 💡 To run the mock(s) in the background and free your terminal, use the `--detach` flag: `mockoon-cli start -d ./data-file.json --detach`. Manage the background process with the [`stop`](#stop-command) and [`status`](#status-command) commands. See [Background mode](#background-mode-detach) below.
 
 **Usage**:
 `$ mockoon-cli start`
@@ -154,6 +156,7 @@ The mocks will run by default on the ports and hostnames specified in the files.
 |-x, --env-vars-prefix | Prefix for environment variables (default: 'MOCKOON\_')|
 |-w, --watch | Watch local data file(s) for changes and restart the server when a change is detected (watch is using polling, see `--polling-interval` flag below)|
 |--polling-interval | Local files watch polling interval in milliseconds (default: 2000)|
+|-D, --detach | Start the mock(s) as a detached background process, freeing the terminal. Linux/macOS only. Incompatible with `--repair`. See [Background mode](#background-mode-detach) below.|
 |--disable-admin-api | Disable the admin API, enabled by default (more info: https://mockoon.com/docs/latest/admin-api/overview/)|
 |--disable-tls | Disable TLS for all environments. TLS configuration is part of the environment configuration (more info: https://mockoon.com/docs/latest/server-configuration/serving-over-tls/)|
 |--max-transaction-logs | Maximum number of transaction logs to keep in memory for retrieval via the admin API (default: 100)|
@@ -204,6 +207,41 @@ This is the counterpart of the "Toggle route" feature in the desktop application
 For example, to disable all routes in a folder named `folder1`, and all routes having "users" in their paths, you can use `--disable-routes folder1 users`.
 
 To disable all routes, use `--disable-routes=*` or `--disable-routes "*"`.
+
+#### Background mode (detach)
+
+Adding the `--detach` (`-D`) flag to `start` runs the mock(s) as a detached background process and frees your terminal immediately. The command prints the process PID and the path to the log file, then returns.
+
+```bash
+$ mockoon-cli start --data ~/data.json --detach
+Mock API started in background (PID 12345) - logs at ~/.mockoon-cli/logs/detach.log
+```
+
+Notes:
+
+- Only a single background daemon runs at a time. A second `start --detach` reports that a mock is already running (exit code `1`) instead of starting a concurrent instance.
+- The detached process's output (boot, errors, and transactions when `--log-transaction` is set) is always written to the fixed path `~/.mockoon-cli/logs/detach.log`, truncated on every `start --detach`. The per-environment structured logs (`~/.mockoon-cli/logs/<env>.log`) are unaffected.
+- All `start` flags are inherited, including `--watch`, multiple `--data`/`--port` entries, etc.
+- Background mode is supported on Linux and macOS. On Windows the command prints a "not supported yet" message.
+- `--detach` is incompatible with `--repair`, and any data file requiring migration/repair is refused (no interactive prompt can run without a terminal).
+
+Use [`stop`](#stop-command) to shut the daemon down and [`status`](#status-command) to inspect it.
+
+### `stop` command
+
+Gracefully stops the background daemon started with [`start --detach`](#background-mode-detach). It takes no arguments and always exits `0` (safe to put before `start` in scripts).
+
+It sends `SIGINT` for a graceful HTTP shutdown, polls for up to 3 seconds, then sends `SIGKILL` if the process is still alive. If nothing is running, it reports so and exits cleanly.
+
+**Usage**:
+`$ mockoon-cli stop`
+
+### `status` command
+
+Reports whether a background daemon is running. When one is running, it prints its metadata (PID, ports, data files, start time, watch mode) and the log paths, and exits `0`. When nothing is running, it reports "stopped" and exits `3` (usable in shell conditionals).
+
+**Usage**:
+`$ mockoon-cli status`
 
 ### `dockerize` command
 

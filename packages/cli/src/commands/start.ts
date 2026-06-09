@@ -24,6 +24,7 @@ import {
 } from '../constants/command.constants';
 import { CLIMessages } from '../constants/cli-messages.constants';
 import {
+  DETACHED_CHILD_ENV,
   getRunningState,
   isBackgroundSupported,
   spawnDetached,
@@ -173,7 +174,9 @@ export default class Start extends Command {
       );
     }
 
-    if (userFlags.detach) {
+    // the detached child re-runs `start` and is flagged via the environment so
+    // it never forks again, even if the detach token survived in its argv
+    if (userFlags.detach && !process.env[DETACHED_CHILD_ENV]) {
       await this.startDetached(userFlags);
 
       return;
