@@ -299,6 +299,93 @@ describe('Detach mode', () => {
     strictEqual(state.pid !== 2147483646, true);
   });
 
+  it(
+    'should refuse a file that needs migration/repair, failing fast with a clear message and creating no daemon nor state file',
+    { timeout: 15000 },
+    async () => {
+      const { instance, output } = await spawnCli([
+        'start',
+        '--data',
+        './test/data/envs/repair.json',
+        '--port',
+        '3090',
+        '--detach'
+      ]);
+
+      const { stdout, stderr } = await output;
+      const combined = stdout + stderr;
+      const exitCode: number = await new Promise((resolve) => {
+        if (instance.exitCode !== null) {
+          resolve(instance.exitCode);
+        } else {
+          instance.on('exit', (code) => resolve(code ?? 0));
+        }
+      });
+
+      // fails fast (no interactive prompt hanging the terminal-less process)
+      ok(exitCode !== 0, `expected a non-zero exit code, got: ${exitCode}`);
+      ok(
+        /background/i.test(combined) &&
+          /(foreground|repair|migrat)/i.test(combined),
+        `expected a clear migration/repair refusal message, got: ${combined}`
+      );
+
+      // no daemon must have been forked and no state file written
+      strictEqual(existsSync(Config.stateFile), false);
+
+      let serverDown = false;
+      try {
+        await fetch('http://localhost:3090/api/test');
+      } catch {
+        serverDown = true;
+      }
+      ok(serverDown, 'expected no daemon to have come up');
+    }
+  );
+
+  it(
+    'should reject --detach combined with --repair as incompatible flags',
+    { timeout: 15000 },
+    async () => {
+      const { instance, output } = await spawnCli([
+        'start',
+        '--data',
+        './test/data/envs/repair.json',
+        '--port',
+        '3091',
+        '--detach',
+        '--repair'
+      ]);
+
+      const { stdout, stderr } = await output;
+      const combined = stdout + stderr;
+      const exitCode: number = await new Promise((resolve) => {
+        if (instance.exitCode !== null) {
+          resolve(instance.exitCode);
+        } else {
+          instance.on('exit', (code) => resolve(code ?? 0));
+        }
+      });
+
+      ok(exitCode !== 0, `expected a non-zero exit code, got: ${exitCode}`);
+      ok(
+        /repair/i.test(combined) &&
+          /(cannot|exclusive|together|not be)/i.test(combined),
+        `expected an incompatible-flags message, got: ${combined}`
+      );
+
+      strictEqual(existsSync(Config.stateFile), false);
+
+      let serverDown = false;
+      try {
+        await fetch('http://localhost:3091/api/test');
+      } catch {
+        serverDown = true;
+      }
+      ok(serverDown, 'expected no daemon to have come up');
+    }
+  );
+
   it('should capture the process output in the detach log and truncate it on each start', async () => {
     const countServerStarted = async (): Promise<number> => {
       const log = await readFile(Config.detachLogFile, 'utf-8');

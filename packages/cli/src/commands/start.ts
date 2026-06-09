@@ -128,7 +128,9 @@ export default class Start extends Command {
       char: 'D',
       description:
         'Start the mock(s) as a detached background process, freeing the terminal',
-      default: false
+      default: false,
+      // repair runs an interactive prompt, which cannot work in background mode
+      exclusive: ['repair']
     }),
     'polling-interval': Flags.integer({
       description: 'Local files watch polling interval in milliseconds',
@@ -291,7 +293,10 @@ export default class Start extends Command {
             proxy: userFlags.proxy as 'enabled' | 'disabled'
           },
           userFlags.repair,
-          userFlags.token
+          userFlags.token,
+          // background mode cannot answer the interactive repair/migration
+          // prompt: fail fast instead of forking a process that would hang
+          true
         );
 
         ports.push(parsedEnvironment.environment.port);

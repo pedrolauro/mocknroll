@@ -9,5 +9,7 @@ export const CLIMessages = {
     "These environment's data are too old or not a valid Mockoon environment.\nPlease verify or migrate them using a more recent version of the application",
   DATA_TOO_RECENT_ERROR:
     "These environment's data are too recent and cannot be run with the CLI\nPlease update the CLI with the following command 'npm install -g @mockoon/cli'",
-  ENVIRONMENT_NOT_AVAILABLE_ERROR: 'No environments exist in specified file'
+  ENVIRONMENT_NOT_AVAILABLE_ERROR: 'No environments exist in specified file',
+  DATA_MIGRATION_DETACH_ERROR:
+    'This environment requires migration or repair, which is not supported in background mode (--detach).\nStart it in the foreground first (without --detach) to migrate/repair it, then start it in the background.'
 };

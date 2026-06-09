@@ -20,10 +20,17 @@ import { confirm } from './utils';
  */
 const migrateAndValidateEnvironment = async (
   environment: Environment,
-  forceRepair: boolean
+  forceRepair: boolean,
+  noPrompt = false
 ) => {
   // environment data are too old: lastMigration is not present
   if (environment.lastMigration === undefined && !forceRepair) {
+    // background mode has no stdin to answer the interactive repair prompt: fail
+    // fast with a clear message instead of hanging the terminal-less process.
+    if (noPrompt) {
+      throw new Error(CLIMessages.DATA_MIGRATION_DETACH_ERROR);
+    }
+
     const answer = await confirm(
       `${
         environment.name ? '"' + environment.name + '"' : 'This environment'
@@ -134,7 +141,8 @@ export const parseDataFile = async (
     proxy?: 'enabled' | 'disabled';
   } = { port: undefined, hostname: undefined },
   repair = false,
-  token?: string
+  token?: string,
+  noPrompt = false
 ): Promise<{ originalPath: string; environment: Environment }> => {
   const openAPIConverter = new OpenApiConverter();
   const data = await loadFile(filePath, false, token);
@@ -159,7 +167,11 @@ export const parseDataFile = async (
       }
 
       if (environment) {
-        environment = await migrateAndValidateEnvironment(environment, repair);
+        environment = await migrateAndValidateEnvironment(
+          environment,
+          repair,
+          noPrompt
+        );
       }
     } catch (JSONError) {
       if (JSONError instanceof Error) {
