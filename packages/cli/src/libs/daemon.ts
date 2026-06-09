@@ -8,8 +8,10 @@ import {
   rmSync,
   writeFileSync
 } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Config } from '../config';
+import { parseDataFile } from './data';
+import { transformEnvironmentName } from './utils';
 
 /**
  * Persisted metadata describing the single background daemon. Written by the
@@ -66,6 +68,57 @@ export const isAlive = (pid: number): boolean => {
   } catch {
     return false;
   }
+};
+
+/**
+ * Return the daemon state only when it points at a live process.
+ *
+ * Reads the state file, probes the recorded PID and auto-cleans a stale state
+ * file (recorded process already dead). Returns null when nothing is running.
+ */
+export const getRunningState = (): DaemonState | null => {
+  const state = readState();
+
+  if (!state) {
+    return null;
+  }
+
+  if (!isAlive(state.pid)) {
+    clearState();
+
+    return null;
+  }
+
+  return state;
+};
+
+/**
+ * Derive the structured per-env log file paths for a daemon state.
+ *
+ * The structured logger names each file `<env>.log` after the environment
+ * name, so the paths are reconstructed by re-parsing the recorded data files.
+ * Files that can no longer be parsed (moved, deleted) are skipped so that
+ * `status` never crashes.
+ */
+export const getEnvLogFiles = async (state: DaemonState): Promise<string[]> => {
+  const logFiles: string[] = [];
+
+  for (const dataFile of state.dataFiles) {
+    try {
+      const { environment } = await parseDataFile(dataFile);
+
+      logFiles.push(
+        join(
+          Config.logsPath,
+          `${transformEnvironmentName(environment.name)}.log`
+        )
+      );
+    } catch {
+      // skip data files that can no longer be parsed
+    }
+  }
+
+  return logFiles;
 };
 
 /**
