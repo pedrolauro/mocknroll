@@ -27,6 +27,18 @@ export type DaemonState = {
 };
 
 /**
+ * Whether the background daemon mode is supported on the given platform.
+ *
+ * Detach/stop/status rely on the POSIX detached-process and signal model,
+ * which does not apply on Windows in v1. The guard lets the commands emit a
+ * clear "not supported yet" message instead of spawning orphan processes or
+ * sending signals that would silently fail.
+ */
+export const isBackgroundSupported = (
+  platform: NodeJS.Platform = process.platform
+): boolean => platform !== 'win32';
+
+/**
  * Read and parse the daemon state file. Returns null when there is no state
  * file or when it cannot be parsed.
  */

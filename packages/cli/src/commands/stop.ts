@@ -1,5 +1,6 @@
 import { Command } from '@oclif/core';
-import { stopDaemon } from '../libs/daemon';
+import { CLIMessages } from '../constants/cli-messages.constants';
+import { isBackgroundSupported, stopDaemon } from '../libs/daemon';
 
 export default class Stop extends Command {
   public static override description =
@@ -8,6 +9,13 @@ export default class Stop extends Command {
   public static override examples = ['$ mockoon-cli stop'];
 
   public async run(): Promise<void> {
+    // platform guard: no detached daemon to signal on Windows in v1.
+    if (!isBackgroundSupported()) {
+      this.log(CLIMessages.BACKGROUND_NOT_SUPPORTED_WINDOWS);
+
+      return;
+    }
+
     const result = await stopDaemon();
 
     if (result.wasRunning) {

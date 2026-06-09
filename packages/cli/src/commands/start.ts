@@ -22,7 +22,13 @@ import {
   commonFlags,
   logTransactionFlag
 } from '../constants/command.constants';
-import { getRunningState, spawnDetached, writeState } from '../libs/daemon';
+import { CLIMessages } from '../constants/cli-messages.constants';
+import {
+  getRunningState,
+  isBackgroundSupported,
+  spawnDetached,
+  writeState
+} from '../libs/daemon';
 import { parseDataFile } from '../libs/data';
 import { getDirname, transformEnvironmentName } from '../libs/utils';
 
@@ -267,6 +273,14 @@ export default class Start extends Command {
   private startDetached = async (
     userFlags: Interfaces.InferredFlags<typeof Start.flags>
   ): Promise<void> => {
+    // platform guard: the detach model relies on POSIX detach + signals, not
+    // supported on Windows in v1. Fail clearly instead of spawning an orphan.
+    if (!isBackgroundSupported()) {
+      this.log(CLIMessages.BACKGROUND_NOT_SUPPORTED_WINDOWS);
+
+      return;
+    }
+
     // singleton guard: refuse a second daemon when one is already alive. A
     // stale state file (recorded process dead) is auto-cleaned here and the
     // start proceeds normally.

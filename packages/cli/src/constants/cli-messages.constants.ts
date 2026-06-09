@@ -11,5 +11,7 @@ export const CLIMessages = {
     "These environment's data are too recent and cannot be run with the CLI\nPlease update the CLI with the following command 'npm install -g @mockoon/cli'",
   ENVIRONMENT_NOT_AVAILABLE_ERROR: 'No environments exist in specified file',
   DATA_MIGRATION_DETACH_ERROR:
-    'This environment requires migration or repair, which is not supported in background mode (--detach).\nStart it in the foreground first (without --detach) to migrate/repair it, then start it in the background.'
+    'This environment requires migration or repair, which is not supported in background mode (--detach).\nStart it in the foreground first (without --detach) to migrate/repair it, then start it in the background.',
+  BACKGROUND_NOT_SUPPORTED_WINDOWS:
+    'Background mode (start --detach, stop, status) is not supported on Windows yet.\nRun the mock in the foreground instead, with "mockoon-cli start" (without --detach).'
 };

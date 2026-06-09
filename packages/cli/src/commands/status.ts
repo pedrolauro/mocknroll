@@ -1,5 +1,10 @@
 import { Command } from '@oclif/core';
-import { getEnvLogFiles, getRunningState } from '../libs/daemon';
+import { CLIMessages } from '../constants/cli-messages.constants';
+import {
+  getEnvLogFiles,
+  getRunningState,
+  isBackgroundSupported
+} from '../libs/daemon';
 
 export default class Status extends Command {
   public static override description =
@@ -9,6 +14,13 @@ export default class Status extends Command {
 
   public async run(): Promise<void> {
     await this.parse(Status);
+
+    // platform guard: no detached daemon to inspect on Windows in v1.
+    if (!isBackgroundSupported()) {
+      this.log(CLIMessages.BACKGROUND_NOT_SUPPORTED_WINDOWS);
+
+      return;
+    }
 
     const state = getRunningState();
 
