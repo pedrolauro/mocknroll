@@ -1,5 +1,5 @@
 import { ok, strictEqual } from 'node:assert';
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { readFile, rm } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import { Config } from '../../src/config';
@@ -58,6 +58,25 @@ const fetchWithRetry = async (
   }
 
   throw lastError;
+};
+
+/**
+ * Run a CLI command to completion and return its stdout and exit code.
+ */
+const runToCompletion = async (
+  args: string[]
+): Promise<{ stdout: string; exitCode: number }> => {
+  const { instance, output } = await spawnCli(args);
+  const { stdout } = await output;
+  const exitCode: number = await new Promise((resolve) => {
+    if (instance.exitCode !== null) {
+      resolve(instance.exitCode);
+    } else {
+      instance.on('exit', (code) => resolve(code ?? 0));
+    }
+  });
+
+  return { stdout, exitCode };
 };
 
 describe('Detach mode', () => {
@@ -143,6 +162,31 @@ describe('Detach mode', () => {
     strictEqual(existsSync(Config.stateFile), false);
   });
 
+  it('should treat a stale state file as nothing running on stop, clean it up and exit 0', async () => {
+    // a state file pointing at a PID that is not alive (stale daemon)
+    writeFileSync(
+      Config.stateFile,
+      JSON.stringify({
+        pid: 2147483646,
+        ports: [3052],
+        dataFiles: ['./test/data/envs/mock1.json'],
+        logFile: Config.detachLogFile,
+        startedAt: new Date().toISOString(),
+        watch: false
+      })
+    );
+
+    const { stdout, exitCode } = await runToCompletion(['stop']);
+
+    strictEqual(exitCode, 0);
+    ok(
+      /no background mock api is running/i.test(stdout),
+      `expected "nothing running" message, got: ${stdout}`
+    );
+    // the stale state file must have been auto-cleaned
+    strictEqual(existsSync(Config.stateFile), false);
+  });
+
   it('should start multiple envs in a single detached daemon', async () => {
     const { output } = await spawnCli([
       'start',
@@ -165,6 +209,94 @@ describe('Detach mode', () => {
 
     ok(body1.includes('mock-content-1'));
     ok(body2.includes('mock-content-1'));
+  });
+
+  it('should refuse a second start --detach while a daemon is alive, reporting the PID and log path with exit 1', async () => {
+    const { output } = await spawnCli([
+      'start',
+      '--data',
+      './test/data/envs/mock1.json',
+      '--port',
+      '3080',
+      '--detach'
+    ]);
+    await output;
+    await fetchWithRetry('http://localhost:3080/api/test');
+
+    const state = await readStateFile();
+
+    // a second start on a different port must be refused
+    const { stdout, exitCode } = await runToCompletion([
+      'start',
+      '--data',
+      './test/data/envs/mock1.json',
+      '--port',
+      '3081',
+      '--detach'
+    ]);
+
+    strictEqual(exitCode, 1);
+    ok(
+      /already running/i.test(stdout),
+      `expected "already running" message, got: ${stdout}`
+    );
+    ok(
+      stdout.includes(String(state.pid)),
+      `expected the running PID in output, got: ${stdout}`
+    );
+    ok(
+      stdout.includes('detach.log'),
+      `expected the log path in output, got: ${stdout}`
+    );
+
+    // no concurrent instance must have come up on the second port
+    let secondPortDown = false;
+    try {
+      await fetch('http://localhost:3081/api/test');
+    } catch {
+      secondPortDown = true;
+    }
+    ok(secondPortDown, 'expected no concurrent instance on the second port');
+
+    // the original daemon must still be the one recorded and answering
+    const stateAfter = await readStateFile();
+    strictEqual(stateAfter.pid, state.pid);
+    ok((await fetchWithRetry('http://localhost:3080/api/test')).ok);
+  });
+
+  it('should not let a stale state file block a new start --detach (cleans it and starts)', async () => {
+    // a state file pointing at a PID that is not alive (stale daemon)
+    writeFileSync(
+      Config.stateFile,
+      JSON.stringify({
+        pid: 2147483646,
+        ports: [3085],
+        dataFiles: ['./test/data/envs/mock1.json'],
+        logFile: Config.detachLogFile,
+        startedAt: new Date().toISOString(),
+        watch: false
+      })
+    );
+
+    const { stdout } = await runToCompletion([
+      'start',
+      '--data',
+      './test/data/envs/mock1.json',
+      '--port',
+      '3085',
+      '--detach'
+    ]);
+
+    // the start must proceed, not report "already running"
+    ok(
+      /started in background/i.test(stdout),
+      `expected the start to proceed, got: ${stdout}`
+    );
+
+    // a new live daemon must answer and the state must point at it (not stale)
+    ok((await fetchWithRetry('http://localhost:3085/api/test')).ok);
+    const state = await readStateFile();
+    strictEqual(state.pid !== 2147483646, true);
   });
 
   it('should capture the process output in the detach log and truncate it on each start', async () => {

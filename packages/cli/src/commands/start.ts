@@ -22,7 +22,7 @@ import {
   commonFlags,
   logTransactionFlag
 } from '../constants/command.constants';
-import { spawnDetached, writeState } from '../libs/daemon';
+import { getRunningState, spawnDetached, writeState } from '../libs/daemon';
 import { parseDataFile } from '../libs/data';
 import { getDirname, transformEnvironmentName } from '../libs/utils';
 
@@ -265,6 +265,20 @@ export default class Start extends Command {
   private startDetached = async (
     userFlags: Interfaces.InferredFlags<typeof Start.flags>
   ): Promise<void> => {
+    // singleton guard: refuse a second daemon when one is already alive. A
+    // stale state file (recorded process dead) is auto-cleaned here and the
+    // start proceeds normally.
+    const running = getRunningState();
+
+    if (running) {
+      this.log(
+        `Mock API already running in background (PID ${running.pid}) - logs at ${running.logFile}`
+      );
+      this.exit(1);
+
+      return;
+    }
+
     const ports: number[] = [];
 
     try {
