@@ -1,5 +1,5 @@
 {
-  "name": "mocknroll",
+  "name": "@pedro.lauro/mocknroll",
   "description": "Mocknroll CLI. Deploy your mock APIs anywhere. Fork of Mockoon CLI.",
   "version": "0.0.1",
   "author": {
