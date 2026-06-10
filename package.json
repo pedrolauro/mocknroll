@@ -23,7 +23,8 @@
     "format": "prettier . --check",
     "format:write": "prettier . --write",
     "test": "glob-bin -c \"node --import tsx --test-concurrency 1 --test\" \"./test/specs/**/*.test.ts\"",
-    "build": "rm -rf dist && tsc -b tsconfig-build.json && oclif manifest"
+    "build": "rm -rf dist && tsc -b tsconfig-build.json && oclif manifest",
+    "prepublishOnly": "npm run build"
   },
   "main": "./dist/index.js",
   "types": "dist/index.d.ts",
@@ -47,10 +48,13 @@
     ],
     "topicSeparator": " "
   },
-  "repository": "https://github.com/mockoon/mockoon",
-  "homepage": "https://mockoon.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedrolauro/mocknroll.git"
+  },
+  "homepage": "https://github.com/pedrolauro/mocknroll#readme",
   "bugs": {
-    "url": "https://github.com/mockoon/mockoon/issues"
+    "url": "https://github.com/pedrolauro/mocknroll/issues"
   },
   "funding": "https://mockoon.com/sponsor-us/",
   "dependencies": {
