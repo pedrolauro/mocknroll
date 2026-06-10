@@ -33,7 +33,7 @@ npm run build
 npm link --no-workspaces
 ```
 
-This installs a global `mocknroll` command on your machine. After editing the source, run `npm run build` again — the linked command picks the new build up automatically (no need to re-link). To remove the global command later: `npm rm -g @mockoon/cli`.
+This installs a global `mocknroll` command on your machine. After editing the source, run `npm run build` again — the linked command picks the new build up automatically (no need to re-link). To remove the global command later: `npm rm -g mocknroll`.
 
 Usage:
 

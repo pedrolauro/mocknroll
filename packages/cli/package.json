@@ -1,6 +1,6 @@
 {
-  "name": "@mockoon/cli",
-  "description": "Mockoon's CLI. Deploy your mock APIs anywhere.",
+  "name": "mocknroll",
+  "description": "Mocknroll CLI. Deploy your mock APIs anywhere. Fork of Mockoon CLI.",
   "version": "9.6.1",
   "author": {
     "name": "Mockoon (1kB SARL-S)",
