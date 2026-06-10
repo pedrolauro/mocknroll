@@ -1,122 +1,88 @@
 <div align="center">
-  <a href="https://mockoon.com" alt="mockoon logo">
-    <img width="200" height="200" src="https://mockoon.com/images/logo-square-cli.png">
-  </a>
-  <br>
-  <a href="https://mockoon.com/download/"><img src="https://img.shields.io/badge/Download%20app-Go-green.svg?style=flat-square&colorB=1997c6"/></a>
-  <a href="https://mockoon.com/"><img src="https://img.shields.io/badge/Website-Go-green.svg?style=flat-square&colorB=1997c6"/></a>
-  <a href="https://mockoon.com/newsletter/"><img src="https://img.shields.io/badge/Newsletter-Subscribe-green.svg?style=flat-square"/></a>
-  <br>
-  <a href="https://www.npmjs.com/package/@mockoon/cli"><img src="https://img.shields.io/npm/v/@mockoon/cli.svg?style=flat-square&colorB=cb3837"/></a>
-  <br>
-  <br>
-  <h1>@Mockoon/cli</h1>
+  <h1>Mocknroll CLI</h1>
 </div>
 
-Welcome to Mockoon's official CLI, a lightweight and fast NPM package to deploy your mock APIs anywhere.
-Feed it with a Mockoon's [data file](https://mockoon.com/docs/latest/mockoon-data-files/data-files-location/), or OpenAPI specification file (JSON or YAML), and you are good to go.
+Mocknroll CLI is a lightweight and fast command-line tool to deploy your mock APIs anywhere. Feed it an environment data file (JSON) or an OpenAPI specification file (JSON or YAML), and you are good to go.
 
-The CLI supports the same features as the main application: [templating system](https://mockoon.com/docs/latest/templating/overview/), [proxy mode](https://mockoon.com/docs/latest/server-configuration/proxy-mode/), [route response rules](https://mockoon.com/docs/latest/route-responses/dynamic-rules/), etc.
-
-![Mockoon CLI screenshot](https://mockoon.com/images/cli-hero-repo.png)
+> **Mocknroll CLI is a fork of [Mockoon CLI](https://github.com/mockoon/mockoon).** It reuses Mockoon's mock-server engine and data-file format, so the upstream [Mockoon documentation](https://mockoon.com/docs/latest/about/) applies to the mocking features (templating system, proxy mode, route response rules, etc.). The few `MOCKOON_*` identifiers and the Mockoon Cloud integration mentioned below are kept on purpose because they reflect the underlying engine and the external Mockoon Cloud service.
 
 - [Installation](#installation)
-- [Run a mock API with the CLI](#run-a-mock-api-with-the-cli)
-  - [Use your Mockoon environment file](#use-your-mockoon-environment-file)
-  - [Use an OpenAPI specification file](#use-an-openapi-specification-file)
+- [Run a mock API](#run-a-mock-api)
+  - [From a local environment file](#from-a-local-environment-file)
+  - [From a cloud-hosted environment](#from-a-cloud-hosted-environment)
+  - [From an OpenAPI specification file](#from-an-openapi-specification-file)
 - [Compatibility](#compatibility)
 - [Commands](#commands)
-  - [Start command](#start-command)
-  - [Dockerize command](#dockerize-command)
-  - [Import command](#import-command)
-  - [Export command](#export-command)
-  - [Help command](#help-command)
-- [Use the GitHub Action](#use-the-github-action)
-- [Docker image](#docker-image)
-  - [Using the generic Docker image](#using-the-generic-docker-image)
-  - [Using the `dockerize` command](#using-the-dockerize-command)
+  - [`start` command](#start-command)
+  - [`stop` command](#stop-command)
+  - [`status` command](#status-command)
+  - [`dockerize` command](#dockerize-command)
+  - [`import` command](#import-command)
+  - [`export` command](#export-command)
+  - [`validate` command](#validate-command)
+  - [`help` command](#help-command)
 - [Logs](#logs)
-- [Mockoon's documentation](#mockoons-documentation)
-- [Sponsors](#sponsors)
-- [Support/feedback](#supportfeedback)
-- [Contributing](#contributing)
-- [Roadmap](#roadmap)
 
 ## Installation
 
-```sh-session
-$ npm install -g @mockoon/cli
+This fork is distributed from source (it is not published to a package registry). From the repository root:
+
+```sh
+cd packages/cli
+npm run build
+npm link --no-workspaces
 ```
+
+This installs a global `mocknroll` command on your machine. After editing the source, run `npm run build` again — the linked command picks the new build up automatically (no need to re-link). To remove the global command later: `npm rm -g @mockoon/cli`.
 
 Usage:
 
-```sh-session
-$ mockoon-cli COMMAND
+```sh
+$ mocknroll COMMAND
 ```
 
-## Changelogs
+## Run a mock API
 
-You will find Mockoon applications [changelogs](https://mockoon.com/releases/) on the official website.
+### From a local environment file
 
-## Run a mock API with the CLI
+You can run your mock in a single step with the [`start` command](#start-command), replacing `~/path/to/your-environment-file.json` with the actual location of your environment file:
 
-### Use your Mockoon environment file
-
-The CLI can import and migrate data from older versions of Mockoon. However, it doesn't alter the file you provide and only migrates a copy. If you created your mock with a more recent version of the application, you need to update your CLI with the following command: `npm install -g @mockoon/cli`.
-
-You can run your mock in one single step using the [start command](#mockoon-cli-start) and replacing `~/path/to/your-environment-file.json` by the actual location of your Mockoon environment file:
-
-```sh-sessions
-$ mockoon-cli start --data ~/path/to/your-environment-file.json
+```sh
+$ mocknroll start --data ~/path/to/your-environment-file.json
 ```
 
-> To locate your environment file from the main application, right-click on a environment and select "Show in folder" in the context menu:
-> ![context menu - show in folder](https://mockoon.com/images/docs/repo/cli/environment-show-in-folder.png)
+You can also load an environment file directly from a URL by passing it as the `--data` parameter:
 
-You can also directly load Mockoon's environment file from a URL. To do so, provide the URL as the `data` parameter instead of a local path:
-
-```sh-sessions
-$ mockoon-cli start --data https://domain.com/your-environment-file.json
+```sh
+$ mocknroll start --data https://domain.com/your-environment-file.json
 ```
 
-### Run a cloud-hosted Mockoon environment
+The CLI can import and migrate data from older versions of the file format. It does not alter the file you provide; it only migrates a copy.
 
-Since v9.5.0, you can also run a cloud-hosted Mockoon environment directly from the CLI by providing the cloud URL as the `data` parameter:
+### From a cloud-hosted environment
 
-```sh-sessions
-$ mockoon-cli start --data cloud://{UUID} --token {TOKEN}
+You can run a cloud-hosted environment from [Mockoon Cloud](https://mockoon.com/cloud/) by providing the cloud URL as the `--data` parameter:
+
+```sh
+$ mocknroll start --data cloud://{UUID} --token {TOKEN}
 ```
 
 Where `{UUID}` is your environment's UUID and `{TOKEN}` is your Mockoon Cloud [access token](https://mockoon.com/cloud/docs/access-tokens/).
 
-The application will provide you with the necessary **commands and instructions** to set up and run the mock on your own servers in the environment dropdown menu:
+### From an OpenAPI specification file
 
-![application dialog showing instructions to pull a cloud environment](https://mockoon.com/images/docs/repo/cli/cli-pull-instructions.png)
+You can also pass an OpenAPI specification file as the `--data` parameter. Both JSON and YAML formats are supported in versions 2.0.0 and 3.0.0, as a local path or a URL:
 
-Learn more about self-hosting cloud environments in the [official Mockoon Cloud documentation](https://mockoon.com/cloud/docs/api-mock-cloud-deployments/#self-host-with-the-cli).
-
-
-### Use an OpenAPI specification file
-
-Another option is to directly pass an OpenAPI specification file as the `data` parameter. Mockoon supports both JSON and YAML formats in versions 2.0.0 and 3.0.0.
-
-> ⚠️ There is currently no equivalent between all the OpenAPI specifications and Mockoon's features ([more info](https://mockoon.com/docs/latest/openapi/openapi-specification-compatibility/)). If you want to run your Mockoon mock APIs with the CLI with all the features (templating, rules, etc.), you must use Mockoon's data files ([see above](#use-your-mockoon-environment-file)) directly, or you may lose part of your mock's behavior.
-
-You can provide a path to a local OpenAPI specification file or directly the file's URL:
-
-```sh-sessions
-$ mockoon-cli start --data ~/path/to/your-opeanapi-file.yaml
+```sh
+$ mocknroll start --data ~/path/to/your-openapi-file.yaml
+$ mocknroll start --data https://domain.com/your-openapi-file.yaml
 ```
 
-Or,
-
-```sh-sessions
-$ mockoon-cli start --data https://domain.com/your-opeanapi-file.yaml
-```
+> ⚠️ Not all OpenAPI features map to the mock engine ([compatibility notes](https://mockoon.com/docs/latest/openapi/openapi-specification-compatibility/)). For full fidelity (templating, rules, etc.), use environment data files ([see above](#from-a-local-environment-file)).
 
 ## Compatibility
 
-Mockoon's CLI has been tested on Node.js versions 18, 20, 22 and 24.
+Mocknroll CLI has been tested on Node.js versions 18, 20, 22 and 24.
 
 ## Commands
 
@@ -131,20 +97,20 @@ Mockoon's CLI has been tested on Node.js versions 18, 20, 22 and 24.
 
 ### `start` command
 
-Starts one (or more) mock API from Mockoon's environment file(s) as a foreground process.
+Starts one (or more) mock API from environment file(s) as a foreground process.
 
 The mocks will run by default on the ports and hostnames specified in the files. You can override these values by using the `--port` and `--hostname` flags.
 `--data`, `--port`, `--hostname`, and `--public-base-url` flags support multiple entries to run multiple mock APIs at once (see examples below).
 
-> 💡 To run the mock(s) in the background and free your terminal, use the `--detach` flag: `mockoon-cli start -d ./data-file.json --detach`. Manage the background process with the [`stop`](#stop-command) and [`status`](#status-command) commands. See [Background mode](#background-mode-detach) below.
+> 💡 To run the mock(s) in the background and free your terminal, use the `--detach` flag: `mocknroll start -d ./data-file.json --detach`. Manage the background process with the [`stop`](#stop-command) and [`status`](#status-command) commands. See [Background mode](#background-mode-detach) below.
 
 **Usage**:
-`$ mockoon-cli start`
+`$ mocknroll start`
 
 **Options**:
 |Flag|Description|
 |-|-|
-|-d, --data |[required] Path(s) or URL(s) to your Mockoon file(s). Supports cloud URLs (e.g. `cloud://`, [see above](#run-a-cloud-hosted-mockoon-environment)).|
+|-d, --data |[required] Path(s) or URL(s) to your environment file(s). Supports cloud URLs (e.g. `cloud://`, [see above](#from-a-cloud-hosted-environment)).|
 |-p, --port |Override environment(s) port(s)|
 |-l, --hostname |Override default listening hostname(s)|
 |-c, --faker-locale | Faker locale (e.g. 'en', 'en_GB', etc. For supported locales, see below.)|
@@ -152,7 +118,7 @@ The mocks will run by default on the ports and hostnames specified in the files.
 |-t, --log-transaction | Log the full HTTP transaction (request and response)|
 |-X, --disable-log-to-file | Disable logging to file|
 |-e, --disable-routes | Disable route(s) by UUID or keyword present in the route's path (do not include a leading slash) or keyword present in a folder name. Use '\*' to disable all routes.|
-|-r, --repair | If the data file seems too old, or an invalid Mockoon file, migrate/repair without prompting|
+|-r, --repair | If the data file seems too old, or an invalid environment file, migrate/repair without prompting|
 |-x, --env-vars-prefix | Prefix for environment variables (default: 'MOCKOON\_')|
 |-w, --watch | Watch local data file(s) for changes and restart the server when a change is detected (watch is using polling, see `--polling-interval` flag below)|
 |--polling-interval | Local files watch polling interval in milliseconds (default: 2000)|
@@ -163,22 +129,22 @@ The mocks will run by default on the ports and hostnames specified in the files.
 |--enable-random-latency | Randomize global and responses latencies between 0 and the specified value (default: false)|
 |--proxy | Override the environment's proxy settings (options: 'enabled' or 'disabled')|
 |--public-base-url | Public base URL used to resolve [relative callback URLs](https://mockoon.com/docs/latest/callbacks/overview/#configure-a-callback) and for the [`baseUrl` templating helper](https://mockoon.com/docs/latest/templating/mockoon-request-helpers/#baseurl) (e.g. https://api.example.com or http://localhost:3000). Must include the protocol and port if non-standard.|
-|-k, --token | Access token used to fetch cloud-hosted Mockoon environments (see  [access token documentation](https://mockoon.com/cloud/docs/access-tokens/))|
+|-k, --token | Access token used to fetch cloud-hosted environments from Mockoon Cloud (see [access token documentation](https://mockoon.com/cloud/docs/access-tokens/))|
 |-h, --help | Show CLI help|
 
 **Examples**:
 
 ```bash
-$ mockoon-cli start --data ~/data.json
-$ mockoon-cli start --data ~/data.json --watch
-$ mockoon-cli start --data ~/data1.json ~/data2.json --port 3000 3001 --hostname 127.0.0.1 192.168.1.1
-$ mockoon-cli start --data https://file-server/data.json
-$ mockoon-cli start --data ~/data.json --log-transaction
-$ mockoon-cli start --data ~/data.json --disable-routes route1 route2 folder1
-$ mockoon-cli start --data ~/data.json --disable-routes=*
-$ mockoon-cli start --data ~/data.json --disable-routes "*"
-$ mockoon-cli start --data ~/data.json --public-base-url https://api.example.com
-$ mockoon-cli start --data cloud://def01727-aeb7-4cf1-9172-e0c38f22b224 --token mkn_sk_1234567890abcdef
+$ mocknroll start --data ~/data.json
+$ mocknroll start --data ~/data.json --watch
+$ mocknroll start --data ~/data1.json ~/data2.json --port 3000 3001 --hostname 127.0.0.1 192.168.1.1
+$ mocknroll start --data https://file-server/data.json
+$ mocknroll start --data ~/data.json --log-transaction
+$ mocknroll start --data ~/data.json --disable-routes route1 route2 folder1
+$ mocknroll start --data ~/data.json --disable-routes=*
+$ mocknroll start --data ~/data.json --disable-routes "*"
+$ mocknroll start --data ~/data.json --public-base-url https://api.example.com
+$ mocknroll start --data cloud://def01727-aeb7-4cf1-9172-e0c38f22b224 --token mkn_sk_1234567890abcdef
 ```
 
 #### Admin API
@@ -189,20 +155,18 @@ Each running mock API has an admin API enabled by default and available at `/moc
 
 #### Faker.js options
 
-- **Locale**: You can set up Faker.js locale with the `--faker-locale` flag. If not provided, Faker.js will use the default locale: `en`. For a list of currently supported locales, you can check the [supported locales list](https://github.com/mockoon/mockoon/blob/main/packages/commons/src/models/faker.model.ts#L1) in Mockoon's commons library. You can also check [Faker.js locales list](https://fakerjs.dev/guide/localization.html#available-locales) for more information (⚠️ Some locales may not yet be implemented in Mockoon).
+- **Locale**: You can set up Faker.js locale with the `--faker-locale` flag. If not provided, Faker.js will use the default locale: `en`. You can check the [Faker.js locales list](https://fakerjs.dev/guide/localization.html#available-locales) for more information (⚠️ Some locales may not yet be implemented in the mock engine).
 - **Seed**: You can set up Faker.js seed with the `--faker-seed` flag. If not provided, Faker.js will not use a seed. By providing a seed value, you can generate repeatable sequences of fake data. Using seeding will not always generate the same value but rather a predictable sequence.
 
 #### Customize the environment variables prefix
 
-You can access environment variables in your routes' responses by using the [`{{getEnvVar 'VARIABLE_NAME'}}` templating helper](https://mockoon.com/docs/latest/variables/environment-variables/). By default, only the environment variables prefixed with `MOCKOON_` are available, for example, `MOCKOON_MY_VARIABLE`.
+You can access environment variables in your routes' responses by using the [`{{getEnvVar 'VARIABLE_NAME'}}` templating helper](https://mockoon.com/docs/latest/variables/environment-variables/). By default, only the environment variables prefixed with `MOCKOON_` are available, for example, `MOCKOON_MY_VARIABLE` (this default prefix comes from the underlying engine).
 
 You can customize the prefix with the `--env-vars-prefix` flag. For example, if you set `--env-vars-prefix CUSTOM_PREFIX_`, you will be able to access the environment variable `CUSTOM_PREFIX_MY_VARIABLE` in your routes' responses. To disable the prefix, set it to an empty string: `--env-vars-prefix ''` or `--env-vars-prefix=`.
 
 #### Disabling routes
 
 You can disable routes at runtime by providing their UUIDs or a keyword present in the route's path (do not include a leading slash). You can also disable all the routes present in a folder (including subfolders) by adding a keyword present in a folder name.
-
-This is the counterpart of the "Toggle route" feature in the desktop application (right-click on a route -> "Toggle route").
 
 For example, to disable all routes in a folder named `folder1`, and all routes having "users" in their paths, you can use `--disable-routes folder1 users`.
 
@@ -213,14 +177,14 @@ To disable all routes, use `--disable-routes=*` or `--disable-routes "*"`.
 Adding the `--detach` (`-D`) flag to `start` runs the mock(s) as a detached background process and frees your terminal immediately. The command prints the process PID and the path to the log file, then returns.
 
 ```bash
-$ mockoon-cli start --data ~/data.json --detach
-Mock API started in background (PID 12345) - logs at ~/.mockoon-cli/logs/detach.log
+$ mocknroll start --data ~/data.json --detach
+Mock API started in background (PID 12345) - logs at ~/.mocknroll/logs/detach.log
 ```
 
 Notes:
 
 - Only a single background daemon runs at a time. A second `start --detach` reports that a mock is already running (exit code `1`) instead of starting a concurrent instance.
-- The detached process's output (boot, errors, and transactions when `--log-transaction` is set) is always written to the fixed path `~/.mockoon-cli/logs/detach.log`, truncated on every `start --detach`. The per-environment structured logs (`~/.mockoon-cli/logs/<env>.log`) are unaffected.
+- The detached process's output (boot, errors, and transactions when `--log-transaction` is set) is always written to the fixed path `~/.mocknroll/logs/detach.log`, truncated on every `start --detach`. The per-environment structured logs (`~/.mocknroll/logs/<env>.log`) are unaffected.
 - All `start` flags are inherited, including `--watch`, multiple `--data`/`--port` entries, etc.
 - Background mode is supported on Linux and macOS. On Windows the command prints a "not supported yet" message.
 - `--detach` is incompatible with `--repair`, and any data file requiring migration/repair is refused (no interactive prompt can run without a terminal).
@@ -234,32 +198,30 @@ Gracefully stops the background daemon started with [`start --detach`](#backgrou
 It sends `SIGINT` for a graceful HTTP shutdown, polls for up to 3 seconds, then sends `SIGKILL` if the process is still alive. If nothing is running, it reports so and exits cleanly.
 
 **Usage**:
-`$ mockoon-cli stop`
+`$ mocknroll stop`
 
 ### `status` command
 
 Reports whether a background daemon is running. When one is running, it prints its metadata (PID, ports, data files, start time, watch mode) and the log paths, and exits `0`. When nothing is running, it reports "stopped" and exits `3` (usable in shell conditionals).
 
 **Usage**:
-`$ mockoon-cli status`
+`$ mocknroll status`
 
 ### `dockerize` command
 
 Generates a Dockerfile used to build a self-contained image of one or more mock API. After building the image, no additional parameters will be needed when running the container.
-This command takes similar flags as the [`start` command](#mockoon-start).
+This command takes similar flags as the [`start` command](#start-command).
 The `--disable-log-to-file` flag will be enabled by default in the resulting Dockerfile.
 
-Please note that this command will copy your Mockoon environments files you provide with the `--data` flag and put them side by side with the generated Dockerfile.
-
-For more information on how to build the image: [Using the dockerize command](#using-the-dockerize-command)
+Please note that this command will copy the environment files you provide with the `--data` flag and put them side by side with the generated Dockerfile.
 
 **Usage**:
-`$ mockoon-cli dockerize`
+`$ mocknroll dockerize`
 
 **Options**:
 |Flag|Description|
 |-|-|
-|-d, --data | [required] Path or URL to your Mockoon file|
+|-d, --data | [required] Path or URL to your environment file|
 |-p, --port | [required] Ports to expose in the Docker container. It should match the number of environment data files you provide with the --data flag.|
 |-o, --output | [required] Generated Dockerfile path and name (e.g. `./folder/Dockerfile`)|
 |-t, --log-transaction | Log the full HTTP transaction (request and response)|
@@ -268,9 +230,17 @@ For more information on how to build the image: [Using the dockerize command](#u
 **Examples**:
 
 ```bash
-$ mockoon-cli dockerize --data ~/data.json --output ./Dockerfile
-$ mockoon-cli dockerize --data ~/data1.json ~/data2.json --output ./Dockerfile
-$ mockoon-cli dockerize --data https://file-server/data.json --output ./Dockerfile
+$ mocknroll dockerize --data ~/data.json --output ./Dockerfile
+$ mocknroll dockerize --data ~/data1.json ~/data2.json --output ./Dockerfile
+$ mocknroll dockerize --data https://file-server/data.json --output ./Dockerfile
+```
+
+Then build and run the generated image:
+
+```bash
+$ cd <output-folder>
+$ docker build -t mocknroll-image .
+$ docker run -d -p <host_port>:3000 mocknroll-image
 ```
 
 ### `import` command
@@ -279,25 +249,23 @@ Import a Swagger v2/OpenAPI v3 specification file (YAML or JSON).
 
 The output file will not be prettified by default. You can prettify it using the `--prettify` flag described below.
 
-Note: This command is similar to the app's import feature, but it will not import directly to your desktop app. If you need to import and open in your desktop app, use the app's import feature instead.
-
 **Usage**:
-`$ mockoon-cli import`
+`$ mocknroll import`
 
 **Options**:
 |Flag|Description|
 |-|-|
 |-i, --input [required] |Path or URL to your Swagger v2/OpenAPI v3 file|
-|-o, --output [required] |Generated Mockoon path and name (e.g. `./environment.json`)|
+|-o, --output [required] |Generated environment file path and name (e.g. `./environment.json`)|
 |-p, --prettify |Prettify output|
 |-h, --help |Show CLI help|
 
 **Examples**:
 
 ```bash
-$ mockoon-cli import --input ~/input.json --output ./output.json
-$ mockoon-cli import --input ~/input.yaml --output ./output.json
-$ mockoon-cli import --input ~/input.json --output ./output.json --prettify
+$ mocknroll import --input ~/input.json --output ./output.json
+$ mocknroll import --input ~/input.yaml --output ./output.json
+$ mocknroll import --input ~/input.json --output ./output.json --prettify
 ```
 
 ### `export` command
@@ -307,12 +275,12 @@ Export a mock API to an OpenAPI v3 specification file (JSON or YAML).
 The output file will not be prettified by default for JSON. You can prettify it using the `--prettify` flag described below.
 
 **Usage**:
-`$ mockoon-cli export`
+`$ mocknroll export`
 
 **Options**:
 |Flag|Description|
 |-|-|
-|-i, --input [required] |Path or URL to your Mockoon data file|
+|-i, --input [required] |Path or URL to your environment data file|
 |-o, --output [required] |Generated OpenApi v3 path and name (e.g. `./output.json`)|
 |-f, --format |Output format, "json" or "yaml" (default: "json")|
 |-p, --prettify |Prettify output (JSON only)|
@@ -321,18 +289,18 @@ The output file will not be prettified by default for JSON. You can prettify it 
 **Examples**:
 
 ```bash
-$ mockoon-cli export --input ~/input.json --output ./output.json
-$ mockoon-cli export --input ~/input.json --output ./output.json --prettify
-$ mockoon-cli export --input ~/input.json --output ./output.yaml --format yaml
+$ mocknroll export --input ~/input.json --output ./output.json
+$ mocknroll export --input ~/input.json --output ./output.json --prettify
+$ mocknroll export --input ~/input.json --output ./output.yaml --format yaml
 ```
 
 ### `validate` command
 
-Validate a Mockoon [environment JSON file](https://mockoon.com/docs/latest/mockoon-data-files/data-files-location/#data-files-schema) against the schema:
+Validate an [environment JSON file](https://mockoon.com/docs/latest/mockoon-data-files/data-files-location/#data-files-schema) against the schema:
 
-```sh-session
-$ mockoon-cli validate --data ~/data1.json ~/data2.json
-$ mockoon-cli validate --data https://file-server/data.json
+```sh
+$ mocknroll validate --data ~/data1.json ~/data2.json
+$ mocknroll validate --data https://file-server/data.json
 ```
 
 > 💡 The `--data` flag behaves like the `--data` flag in the `start` command, meaning you can provide multiple paths or URLs to validate multiple files at once.
@@ -356,14 +324,14 @@ Invalid environment: ~/data2.json
  »   Error: Environments validation failed
 ```
 
-> ⚠️ This command does not validate the OpenAPI specification files. OpenAPI files are validated by the [start command](#start-command) when you run it with an OpenAPI file as the `--data` parameter.
+> ⚠️ This command does not validate the OpenAPI specification files. OpenAPI files are validated by the [`start` command](#start-command) when you run it with an OpenAPI file as the `--data` parameter.
 
 ### `help` command
 
 Returns information about a command.
 
 **Usage**:
-`$ mockoon-cli help [COMMAND]`
+`$ mocknroll help [COMMAND]`
 
 **Arguments and options**:
 |Flag|Description|
@@ -371,115 +339,15 @@ Returns information about a command.
 |COMMAND |command to show help for|
 |--all |see all commands in CLI|
 
-## Use the GitHub Action
-
-We maintain a [GitHub Action](https://github.com/marketplace/actions/mockoon-cli) that allows you to run your Mockoon CLI in your CI/CD pipelines.
-
-You can find a [sample workflow](https://github.com/marketplace/actions/mockoon-cli#github-action-usage) in the GitHub Action's documentation.
-
-Here is an example of a workflow that will run your mock API on every push to the `main` branch:
-
-```yaml
-name: Mockoon CLI demo
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  mockoon-cli-demo:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Mockoon CLI
-        uses: mockoon/cli-action@v2
-        with:
-          # Mockoon CLI version, default to 'latest'
-          version: 'latest'
-          # Mockoon local data file or URL
-          data-file: './mockoon-data.json'
-          # port, default to 3000
-          port: 3000
-      - name: Make test call
-        run: curl -X GET http://localhost:3000/endpoint`
-```
-
-> 💡 If you are building your own actions with the CLI, do not forget to add an `&` at the end of the command to run it in the background and avoid blocking the workflow: `mockoon-cli start -d ./data-file.json &`.
-
-## Docker image
-
-### Using the generic Docker image
-
-A generic Docker image is published on the [Docker Hub Mockoon CLI repository](https://hub.docker.com/r/mockoon/cli). It uses `node:18-alpine` and installs the latest version of Mockoon CLI.
-
-All of `mockoon-cli start` flags (`--port`, etc.) must be provided when running the container.
-
-To load the Mockoon data, you can either mount a local data file and pass `mockoon-cli start` flags at the end of the command:
-
-`docker run -d --mount type=bind,source=/home/your-data-file.json,target=/data,readonly -p 3000:3000 mockoon/cli:latest --data data --port 3000`
-
-Or directly pass a URL to the `mockoon-cli start` command, without mounting a local data file:
-
-`docker run -d -p 3000:3000 mockoon/cli:latest -d https://raw.githubusercontent.com/mockoon/mock-samples/main/samples/generate-mock-data.json --port 3000`
-
-Mockoon CLI's logs will be sent to stdout/stderr (console). File logging is disabled by default in the Docker image.
-
-#### Docker compose
-
-You can also use `docker-compose` with a `docker-compose.yml` file:
-
-```
-mock-server:
-  image: mockoon/cli:latest
-  command: ["--data", "data", "--port", "3000"]
-  healthcheck:
-    test: ["CMD-SHELL", "curl -f http://localhost:3000/your-healthcheck-route || exit 1"]
-    interval: 30s
-    timeout: 5s
-    retries: 2
-    start_period: 10s
-  volumes:
-    - /home/your-data-file.json:/data:readonly
-```
-
-> Please note that our [Docker image includes an `ENTRYPOINT`](https://github.com/mockoon/mockoon/blob/main/packages/cli/docker/Dockerfile#L16) that you may override or not. If you don't override it, and use Docker compose `command`, do not include `mockoon-cli start` as it is already included in the `ENTRYPOINT`.
-
-This snippet also provides an optional healthcheck, which means you can block until the server is able to handle responses when bring it up by running `docker compose up --detach --wait`.
-
-> This example requires a `your-healthcheck-route` route configured to return a 200 status code without latency.
-
-### Using the `dockerize` command
-
-You can use the [`dockerize` command](#mockoon-cli-dockerize) to generate a new Dockerfile that will allow you to build a self-contained image. Thus, no Mockoon CLI specific parameters will be needed when running the container.
-
-- Run the `dockerize` command:
-
-  `mockoon-cli dockerize --data ./sample-data.json --port 3000 --output ./tmp/Dockerfile`
-
-- navigate to the `tmp` folder, where the Dockerfile has been generated and the environment file(s) copied:
-
-  `cd tmp`
-
-- Build the image:
-
-  `docker build -t mockoon-image .`
-
-- Run the container:
-
-  `docker run -d -p <host_port>:3000 mockoon-image`
-
 ## Logs
 
-Logs are located in `~/.mockoon-cli/logs/{mock-name}.log`. This file contains all the log entries (all levels) produced by the running mock server. Most of the errors occurring in Mockoon CLI (or the main application) are not critical and therefore considered as normal output. As an example, if the JSON body from an entering request is erroneous, Mockoon will log a JSON parsing error, but it won't block the normal execution of the application.
+Logs are located in `~/.mocknroll/logs/{mock-name}.log`. This file contains all the log entries (all levels) produced by the running mock server. Most of the errors occurring in the CLI are not critical and are therefore considered as normal output. As an example, if the JSON body from an entering request is erroneous, the server will log a JSON parsing error, but it won't block the normal execution.
 
-As the CLI is running in the foreground, logs are also sent to stdout (console).
+When running in the foreground, logs are also sent to stdout (console). In background mode (`--detach`), the process output goes to `~/.mocknroll/logs/detach.log` instead.
 
 ### Transaction logging
 
-When using the `--log-transaction` flag, logs will contain the full transaction (request and response) with the same information you can see in the desktop application "Logs" tab.
-
-Example:
+When using the `--log-transaction` flag, logs will contain the full transaction (request and response). Example entry (the `"app": "mockoon-server"` field comes from the underlying mock-server engine):
 
 ```json
 {
@@ -519,142 +387,44 @@ Example:
 }
 ```
 
-The `transaction` model can be found [here](https://github.com/mockoon/mockoon/blob/main/packages/commons/src/models/server.model.ts#L27-L47).
-
 ### Disable logging
 
-You can disable the logging to the console by redirecting the stdout and stderr outputs:
+You can disable logging to the console by redirecting the stdout and stderr outputs:
 
 - Unix:
 
-  ```sh-sessions
-  mockoon-cli start --data ./data.json > /dev/null 2>&1
+  ```sh
+  mocknroll start --data ./data.json > /dev/null 2>&1
   ```
 
   or:
 
-  ```sh-sessions
-  mockoon-cli start --data ./data.json &> /dev/null
+  ```sh
+  mocknroll start --data ./data.json &> /dev/null
   ```
 
 - Windows (cmd):
 
-  ```sh-sessions
-  mockoon-cli start --data ./data.json 2> NUL
+  ```sh
+  mocknroll start --data ./data.json 2> NUL
   ```
 
   or:
 
-  ```sh-sessions
-  mockoon-cli start --data ./data.json > NUL 2>&1
+  ```sh
+  mocknroll start --data ./data.json > NUL 2>&1
   ```
 
 - Windows (PowerShell):
 
-  ```sh-sessions
-  mockoon-cli start --data ./data.json 2> $null
+  ```sh
+  mocknroll start --data ./data.json 2> $null
   ```
 
   or:
 
-  ```sh-sessions
-  mockoon-cli start --data ./data.json > $null 2>&1
+  ```sh
+  mocknroll start --data ./data.json > $null 2>&1
   ```
 
-- Cross platform: use `dev-null-cli` package
-  ```sh-sessions
-  mockoon-cli start --data ./data.json | npx dev-null
-  ```
-
-You can also disable file logging by using th `--disable-log-to-file` flag. This is enabled by default in the Docker image.
-
-## Mockoon's documentation
-
-You will find Mockoon's [documentation](https://mockoon.com/docs/latest/about/) on the official website.
-
-## Support us!
-
-Mockoon is proudly **independent** and **open-source**, maintained without external funding. We rely on both **sponsorships** and **Mockoon Cloud subscriptions** to keep improving the project and building new features. A **big thank you** to the companies below for supporting our work and helping us grow (and all the [sponsors](https://github.com/mockoon/mockoon/blob/main/backers.md) who helped this project over time!):
-
-### Platinum
-
-<div align="center" style="margin-top:20px;margin-bottom:20px;">
-  <a href="https://github.blog/2023-04-12-github-accelerator-our-first-cohort-and-whats-next/">
-      <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://mockoon.com/images/sponsors/light/github.png">
-      <source media="(prefers-color-scheme: light)" srcset="https://mockoon.com/images/sponsors/github.png">
-      <img src="https://mockoon.com/images/sponsors/light/github.png" alt="GitHub logo" />
-      </picture>
-  </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://localazy.com/register?ref=a9CiDC61gOac-azO">
-      <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://mockoon.com/images/sponsors/light/localazy.png">
-      <source media="(prefers-color-scheme: light)" srcset="https://mockoon.com/images/sponsors/localazy.png">
-      <img src="https://mockoon.com/images/sponsors/light/localazy.png" alt="Localazy logo" />
-      </picture>
-  </a><br/><br/>
-  <a href="https://serpapi.com/?utm_source=mockoon">
-      <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://mockoon.com/images/sponsors/light/serpapi.png">
-      <source media="(prefers-color-scheme: light)" srcset="https://mockoon.com/images/sponsors/serpapi.png">
-      <img src="https://mockoon.com/images/sponsors/light/serpapi.png" alt="SerpApi logo" />
-      </picture>
-  </a>
-</div>
-
-### Gold
-
-<div align="center" style="margin-top:20px;margin-bottom:20px;">
- 
-  <a href="https://www.testmuai.com/?utm_medium=sponsor&utm_source=mockoon">
-      <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://mockoon.com/images/sponsors/light/testmuai.png">
-      <source media="(prefers-color-scheme: light)" srcset="https://mockoon.com/images/sponsors/testmuai.png">
-      <img src="https://mockoon.com/images/sponsors/light/testmuai.png" alt="TestMu AI logo" />
-      </picture>
-  </a>
-</div>
-
-### Silver
-
-<div align="center" style="margin-top:20px;margin-bottom:20px;">  
-  <a href="https://www.emqx.io/">  
-      <img src="https://mockoon.com/images/sponsors/emqx.png" alt="emqx logo" />
-  </a>
-</div>
-
-If you'd like to **support Mockoon** as well, you can **become a sponsor** or **subscribe to Mockoon Cloud**, every contribution helps keep the project alive and evolving. Thank you!
-
-<div align="center" style="margin-top:20px;margin-bottom:20px;">
-<a href="https://github.com/sponsors/mockoon"><img src="https://mockoon.com/images/sponsor-btn.png?" width="250" alt="sponsor button" /></a>
-</div>
-
-## Subscribe to Mockoon Cloud
-
-With advanced features for solo developers and teams, Mockoon Cloud supercharges your API development:
-
-- ☁️ [cloud deployments](https://mockoon.com/cloud/docs/api-mock-cloud-deployments/)
-- 🔄️ [data synchronization and real-time collaboration](https://mockoon.com/cloud/docs/data-synchronization-team-collaboration/)
-- 🤖 [AI powered API mocking](https://mockoon.com/ai-powered-api-mocking/)
-- 📃 Access to dozens of [ready-to-use JSON templates](https://mockoon.com/templates/).
-- 💬 Priority support and training.
-
-Upgrade today and take your API development to the next level.
-
-<div align="center" style="margin-top:20px;margin-bottom:20px;">
-<a href="https://mockoon.com/cloud/"><img src="https://mockoon.com/images/cloud-btn.png?" width="250" alt="cloud button" /></a>
-</div>
-
-## Support/feedback
-
-You can discuss all things related to Mockoon's CLI, and ask for help, on the [official community](https://github.com/mockoon/mockoon/discussions). It's also a good place to discuss bugs and feature requests before opening an issue on this repository.
-
-## Contributing
-
-If you are interested in contributing to Mockoon, please take a look at the [contributing guidelines](https://github.com/mockoon/mockoon/blob/main/CONTRIBUTING.md).
-
-Please also take a look at our [Code of Conduct](https://github.com/mockoon/.github/blob/main/CODE_OF_CONDUCT.md).
-
-## Roadmap
-
-If you want to know what will be coming in the next release you can check the global [Roadmap](https://mockoon.com/public-roadmap/) or [subscribe to our newsletter](https://mockoon.com/newsletter/).
+You can also disable file logging by using the `--disable-log-to-file` flag.
