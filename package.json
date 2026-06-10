@@ -1,20 +1,16 @@
 {
-  "name": "@mockoon/mockoon",
-  "private": true,
-  "version": "1.0.0",
+  "name": "mocknroll",
+  "description": "Mocknroll CLI. Deploy your mock APIs anywhere. Fork of Mockoon CLI.",
+  "version": "0.0.1",
   "author": {
     "name": "Mockoon (1kB SARL-S)",
     "email": "team@mockoon.com",
     "url": "https://mockoon.com/"
   },
-  "description": "Mockoon is the easiest and quickest way to run mock APIs locally. No remote deployment, no account required, open source.",
-  "license": "MIT",
-  "repository": "https://github.com/mockoon/mockoon",
-  "homepage": "https://mockoon.com",
-  "bugs": {
-    "url": "https://github.com/mockoon/mockoon/issues"
+  "bin": {
+    "mocknroll": "./bin/run.js"
   },
-  "funding": "https://mockoon.com/sponsor-us/",
+  "license": "MIT",
   "prettier": {
     "singleQuote": true,
     "tabWidth": 2,
@@ -23,74 +19,70 @@
     "endOfLine": "auto"
   },
   "scripts": {
-    "lint": "npm run lint --workspaces",
+    "lint": "eslint",
     "format": "prettier . --check",
     "format:write": "prettier . --write",
-    "set-versions": "node ./scripts/set-versions.mjs && npm install",
-    "oldset-versions": "npm version --git-tag-version=false --workspaces $1 && npm install --workspace=@mockoon/app --workspace=@mockoon/cli --workspace=@mockoon/cloud --workspace=@mockoon/commons-server --workspace=@mockoon/serverless @mockoon/commons@$0 && npm install --workspace=@mockoon/app --workspace=@mockoon/cli --workspace=@mockoon/serverless @mockoon/commons-server@$0 && npm install --workspace=@mockoon/app @mockoon/cloud@$0",
-    "publish": "npm publish --workspace=@mockoon/commons --workspace=@mockoon/commons-server --workspace=@mockoon/cloud --workspace=@mockoon/cli --workspace=@mockoon/serverless",
-    "build:commons": "npm run build --workspace=@mockoon/commons",
-    "build:commons:watch": "npm run build:watch --workspace=@mockoon/commons",
-    "build:commons-server": "npm run build --workspace=@mockoon/commons-server",
-    "build:commons-server:watch": "npm run build:watch --workspace=@mockoon/commons-server",
-    "build:cloud": "npm run build --workspace=@mockoon/cloud",
-    "build:cloud:watch": "npm run build:watch --workspace=@mockoon/cloud",
-    "build:libs": "npm run build --workspace=@mockoon/commons --workspace=@mockoon/commons-server --workspace=@mockoon/cloud",
-    "build:libs:watch": "concurrently \"npm run build:watch --workspace=@mockoon/commons\" \"npm run build:watch --workspace=@mockoon/commons-server\" \"npm run build:watch --workspace=@mockoon/cloud\"",
-    "build:serverless": "npm run build --workspace=@mockoon/serverless",
-    "build:cli": "npm run build --workspace=@mockoon/cli",
-    "build:web:dev:watch": "npm run build:watch:web --workspace=@mockoon/app",
-    "build:desktop:dev:watch": "npm run build:watch:all --workspace=@mockoon/app",
-    "build:desktop:dev": "npm run build:dev:all --workspace=@mockoon/app",
-    "build:desktop:ci": "npm run build:ci:all --workspace=@mockoon/app",
-    "build:desktop:prod": "npm run build:prod:all --workspace=@mockoon/app",
-    "build:web:prod": "npm run build:prod:web --workspace=@mockoon/app",
-    "start:web:dev": "npm run start:web --workspace=@mockoon/app",
-    "start:desktop:dev": "npm run start --workspace=@mockoon/app",
-    "start:desktop:dev:2": "npm run start:2 --workspace=@mockoon/app",
-    "start:desktop:dev:3": "npm run start:3 --workspace=@mockoon/app",
-    "test:commons": "npm run test --workspace=@mockoon/commons",
-    "test:commons-server": "npm run test --workspace=@mockoon/commons-server",
-    "test:libs": "npm run test --workspace=@mockoon/commons --workspace=@mockoon/commons-server",
-    "test:serverless": "npm run test --workspace=@mockoon/serverless",
-    "test:cli": "npm run test --workspace=@mockoon/cli",
-    "test:desktop:win": "npm run test:win --workspace=@mockoon/app",
-    "test:desktop:mac": "npm run test:mac --workspace=@mockoon/app",
-    "test:desktop:linux": "npm run test:linux --workspace=@mockoon/app",
-    "package:desktop:win": "npm run package:win --workspace=@mockoon/app",
-    "package:desktop:win:appx": "npm run package:win:appx --workspace=@mockoon/app",
-    "package:desktop:mac": "npm run package:mac --workspace=@mockoon/app",
-    "package:desktop:mac:unsigned": "npm run package:mac:unsigned --workspace=@mockoon/app",
-    "package:desktop:linux": "npm run package:linux --workspace=@mockoon/app",
-    "package:desktop:test:win": "npm run package:test:win --workspace=@mockoon/app",
-    "package:desktop:test:mac": "npm run package:test:mac --workspace=@mockoon/app",
-    "package:desktop:test:linux": "npm run package:test:linux --workspace=@mockoon/app",
-    "deploy:web": "npm run deploy:web --workspace=@mockoon/app",
-    "documentation:desktop": "npm run documentation --workspace=@mockoon/app"
+    "test": "glob-bin -c \"node --import tsx --test-concurrency 1 --test\" \"./test/specs/**/*.test.ts\"",
+    "build": "rm -rf dist && tsc -b tsconfig-build.json && oclif manifest",
+    "prepublishOnly": "npm run build"
   },
-  "workspaces": [
-    "packages/app",
-    "packages/cli",
-    "packages/cloud",
-    "packages/commons",
-    "packages/commons-server",
-    "packages/serverless"
+  "main": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist",
+    "/bin",
+    "/oclif.manifest.json"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "oclif": {
+    "commands": "./dist/commands",
+    "hooks": {
+      "init": "./dist/hooks/init"
+    },
+    "bin": "mocknroll",
+    "dirname": "cli",
+    "plugins": [
+      "@oclif/plugin-help"
+    ],
+    "topicSeparator": " "
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedrolauro/mocknroll.git"
+  },
+  "homepage": "https://github.com/pedrolauro/mocknroll#readme",
+  "bugs": {
+    "url": "https://github.com/pedrolauro/mocknroll/issues"
+  },
+  "funding": "https://mockoon.com/sponsor-us/",
+  "dependencies": {
+    "@mockoon/commons": "9.6.1",
+    "@mockoon/commons-server": "9.6.1",
+    "@oclif/core": "4.10.3",
+    "@oclif/plugin-help": "6.2.41",
+    "chokidar": "4.0.3",
+    "mustache": "4.2.0",
+    "tslib": "2.8.1"
+  },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@stylistic/eslint-plugin": "5.10.0",
+    "@types/mustache": "4.2.6",
     "@types/node": "24.12.0",
-    "concurrently": "9.2.1",
-    "dotenv": "17.4.0",
     "eslint": "10.1.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-prettier": "5.5.5",
-    "glob": "13.0.6",
     "glob-bin": "1.1.0",
+    "oclif": "4.22.96",
     "prettier": "3.8.1",
     "prettier-plugin-organize-imports": "4.3.0",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.58.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

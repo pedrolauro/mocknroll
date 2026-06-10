@@ -17,6 +17,12 @@
     "noPropertyAccessFromIndexSignature": true,
     "isolatedModules": true,
     "useDefineForClassFields": false,
-    "noImplicitOverride": true
-  }
+    "noImplicitOverride": true,
+    "target": "ES2019",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "useUnknownInCatchVariables": true
+  },
+  "include": ["./src", "./test"]
 }

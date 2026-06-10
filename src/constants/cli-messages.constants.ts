@@ -1,0 +1,13 @@
+export const CLIMessages = {
+  DATA_INVALID:
+    'This file is not a valid OpenAPI specification (JSON or YAML v2.0.0 and v3.0.0) or Mockoon environment',
+  DATA_TOO_OLD_ERROR:
+    "These environment's data are too old or not a valid Mockoon environment.\nPlease verify or migrate them using a more recent version of the application",
+  DATA_TOO_RECENT_ERROR:
+    "These environment's data are too recent and cannot be run with the CLI\nPlease update the CLI with the following command 'npm install -g @mockoon/cli'",
+  ENVIRONMENT_NOT_AVAILABLE_ERROR: 'No environments exist in specified file',
+  DATA_MIGRATION_DETACH_ERROR:
+    'This environment requires migration or repair, which is not supported in background mode (--detach).\nStart it in the foreground first (without --detach) to migrate/repair it, then start it in the background.',
+  BACKGROUND_NOT_SUPPORTED_WINDOWS:
+    'Background mode (start --detach, stop, status) is not supported on Windows yet.\nRun the mock in the foreground instead, with "mockoon-cli start" (without --detach).'
+};
