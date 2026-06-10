@@ -8,17 +8,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    groups:
-      angular:
-        patterns:
-          - "@angular*"
-        update-types:
-          - "minor"
-          - "patch"
     ignore:
-      - dependency-name: "express"
-        # Ignore new versions for 5.x
-        versions: ["5.x"]
+      # Keep Mockoon libs pinned to the forked version (9.6.1)
+      - dependency-name: "@mockoon/commons"
+      - dependency-name: "@mockoon/commons-server"
       - dependency-name: "*"
         # Ignore all major updates
         update-types: ["version-update:semver-major"]

@@ -1,5 +1,4 @@
 .github
-packages/app/packages
+.claude
 *.md
-site.webmanifest
-**/test/data/** 
+**/test/data/**
